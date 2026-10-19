@@ -54,41 +54,38 @@ struct Settings
 };
 
 //==============================================================================
-// The character knob, read four ways. Below the middle it is digital, more and
-// more so towards 0; above it, tape, more and more worn towards 1.
+// The character knob. Below the middle it is digital, the more exact the
+// further left: at 0 each repeat is the very sound it came from, with
+// nothing filtered and nothing coloured. Above the middle it is tape, the
+// more worn the further right.
 inline float clamp01 (float x) noexcept { return x < 0.0f ? 0.0f : (x > 1.0f ? 1.0f : x); }
 
 inline float digitalAmount (float character) noexcept { return clamp01 ((0.5f - character) * 2.0f); }
 inline float analogAmount (float character) noexcept  { return clamp01 ((character - 0.5f) * 2.0f); }
 
-/** The bits the repeats are kept on: 16 in the clean middle (nothing heard),
-    12 a quarter of the way, 7 at the electric end. */
-inline float crushBits (float character) noexcept { return 16.0f - 9.0f * digitalAmount (character); }
-
-/** The rate they are held at: the full rate in the middle, 7 kHz at the end,
-    and no filter in front of it, for the aliasing. */
-inline float holdHz (float character, float sampleRate) noexcept
-{
-    const auto d = digitalAmount (character);
-    return sampleRate * std::pow (7000.0f / sampleRate, d * d);
-}
-
-/** The high cut in the loop, which each repeat goes through once more. */
+/** The high cut in the loop, which each repeat goes through once more: gone
+    altogether at the digital end (above what the loop filters at all), a
+    gentle 18 kHz in the middle, down to 2.6 kHz on worn tape. Tone moves it. */
 inline float loopLowpassHz (const Settings& s) noexcept
 {
     const auto d = digitalAmount (s.character), a = analogAmount (s.character);
     auto hz = a > 0.0f ? 18000.0f * std::pow (2600.0f / 18000.0f, std::pow (a, 0.85f))
-                       : 18000.0f - 22000.0f * d * (1.0f - d) + 4000.0f * d * d;     // 12.5 kHz at 12 bit, open at the end
+                       : 18000.0f * std::pow (4.0f, d);
 
     hz *= std::pow (2.0f, s.tone < 0.0f ? 2.6f * s.tone : 0.8f * s.tone);
     return hz;
 }
 
-/** And the low cut: tape thins out the repeats. */
+/** Above this, the loop's high cut is left out. */
+inline float openLowpassHz (float sampleRate) noexcept { return 0.45f * sampleRate; }
+
+/** And the low cut: none at the digital end, tape thins out the repeats,
+    and a bright tone thins them whatever the character. */
 inline float loopHighpassHz (const Settings& s) noexcept
 {
-    const auto a = analogAmount (s.character);
-    return (25.0f + 125.0f * a) * std::pow (2.0f, s.tone > 0.0f ? 2.2f * s.tone : 0.6f * s.tone);
+    const auto d = digitalAmount (s.character), a = analogAmount (s.character);
+    const auto base = (25.0f * (1.0f - d) + 125.0f * a) * std::pow (2.0f, s.tone < 0.0f ? 0.6f * s.tone : 2.2f * s.tone);
+    return base + (s.tone > 0.0f ? 350.0f * s.tone * std::sqrt (s.tone) : 0.0f);
 }
 
 /** How hard tape is driven: a small signal is passed at its level, a loud
@@ -207,7 +204,6 @@ private:
         std::vector<float> line;
         int write = 0;
         float lp1 = 0.0f, lp2 = 0.0f, hp = 0.0f;
-        float heldPhase = 1.0f, held = 0.0f;
         float looped = 0.0f;                // what went back on the line last time
         PitchShifter shifter;
     };
@@ -221,11 +217,11 @@ private:
     float outGain = 1.0f, dryAmount = 1.0f, wetAmount = 0.0f, feedbackSmoothed = 0.0f;
     float spaceSmoothed = 0.0f, pingSmoothed = 0.0f;
 
-    // The unsteadiness: the slow wow, the quick flutter, a wandering drift,
-    // and for digital, a value held and jumped from.
+    // The unsteadiness: the slow wow, the quick flutter and a wandering
+    // drift of tape, and the even sweep of a digital modulation.
     double wowPhase = 0.0, flutterPhase = 0.0;
     float drift = 0.0f, driftTarget = 0.0f, driftCountdown = 0.0f;
-    float stepped = 0.0f, steppedTarget = 0.0f, stepCountdown = 0.0f;
+    double sweepPhase = 0.0;
     float wobbleShown = 0.0f;
     uint32_t noise = 0x9e3779b9u;
 

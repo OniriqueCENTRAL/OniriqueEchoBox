@@ -1,9 +1,9 @@
 # Onirique EchoBox
 
-Un delay créatif qui voyage, d'un seul bouton, du numérique le plus électrique à
-la bande la plus usée : en passant par une machine 12 bits à pitch shifter dans
-l'esprit des delays numériques de studio des années 80, un numérique parfaitement
-propre, et l'écho à bande chaud, à une tête ou multi-têtes.
+Un delay créatif qui voyage, d'un seul bouton, du numérique le plus pur à la bande
+la plus usée : d'un côté des répétitions exactes, nettes, avec un pitch shifter
+dans l'esprit des delays numériques de studio des années 80 ; de l'autre l'écho à
+bande chaud, à une tête ou multi-têtes.
 
 VST3 (Windows, macOS) et Audio Unit (macOS). Entrée mono ou stéréo, sortie
 stéréo. Aucune latence. « EchoBox » est un nom provisoire.
@@ -21,10 +21,10 @@ stéréo. Aucune latence. « EchoBox » est un nom provisoire.
 | | Mix | sec seul (0) à échos seuls (100), les deux à plein au milieu |
 | | Heads 1 2 3 | les têtes de lecture, à une, deux et trois fois le temps, combinables |
 | | Freeze | fige la bande et la fait tourner en boucle, sans perte |
-| CHARACTER | Character | DIG ⟷ TAPE : électrique · 12 bits · propre · bande · bande usée |
+| CHARACTER | Character | DIG ⟷ TAPE : numérique pur · numérique · bande · bande usée |
 | COLOUR | Tone | répétitions de plus en plus sombres, ou plus brillantes et fines |
 | | Pitch | chaque répétition monte ou descend de -12 à +12 demi-tons, en cascade |
-| | Wobble | pleurage et scintillement côté bande, sauts d'horloge côté numérique |
+| | Wobble | pleurage et scintillement côté bande, modulation régulière côté numérique |
 | | Ping-Pong | les répétitions passent d'un côté à l'autre |
 | | Space | la réverbe où tombent les échos, en ressort côté bande |
 
@@ -32,19 +32,18 @@ stéréo. Aucune latence. « EchoBox » est un nom provisoire.
 
 Le bouton se lit en deux moitiés.
 
-- **0 → 50 (numérique)** : les répétitions sont réenregistrées sur de moins en
-  moins de bits (16 au milieu, 12 au quart, 7 tout à gauche) et à une fréquence de
-  plus en plus basse (jusqu'à 7 kHz, sans filtre : le repliement fait partie du
-  son). Le filtre de la boucle se resserre vers 12,5 kHz au quart, comme les
-  convertisseurs d'époque, puis se rouvre tout à gauche. Le temps change presque
-  instantanément.
+- **0 → 50 (numérique)** : tout à gauche, chaque répétition est la copie exacte du
+  son, sans filtre (ni aigus ni graves coupés), sans saturation, sans dégradation
+  de bits ou de fréquence. En allant vers le milieu, un filtre très doux (18 kHz)
+  arrondit à peine les répétitions. Le temps change presque instantanément.
 - **50 → 100 (bande)** : la tête d'enregistrement sature de plus en plus, chaque
   répétition perd des aigus (jusqu'à 2,6 kHz) et des graves, un léger souffle
   s'installe, le temps glisse en faisant plier la hauteur quand on le tourne, et
   le Space prend le son d'un ressort.
 
 Le Wobble change de nature avec lui : pleurage lent, scintillement rapide et
-dérive au hasard côté bande ; valeurs tenues et sautées côté numérique.
+dérive au hasard côté bande ; modulation régulière, gauche et droite opposées,
+côté numérique.
 
 ## L'écran
 

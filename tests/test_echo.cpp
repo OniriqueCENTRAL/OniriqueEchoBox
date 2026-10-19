@@ -114,6 +114,26 @@ int main()
         check (peakBetween (out[0], 0, ms (90)) < 1.0e-3f, "and nothing before it");
     }
 
+    // Full digital: each repeat is the very sound, untouched.
+    {
+        auto s = clean();
+        s.character = 0.0f;
+        s.feedback = 0.5f;
+        const auto noise = mdxtest::makeNoise (0.05, kSr, 0.5f);
+        const auto out = play (s, noise, ms (300));
+        double first = 0.0, second = 0.0;
+
+        for (size_t i = 0; i < noise.size(); ++i)
+        {
+            first = std::max (first, (double) std::abs (out[0][ms (100) + i] - noise[i]));
+            second = std::max (second, (double) std::abs (out[0][ms (200) + i] - 0.5f * noise[i]));
+        }
+
+        std::printf ("    full digital, against the input: %.1f dB on the first repeat, %.1f dB on the second\n",
+                     20.0 * std::log10 (first + 1e-12), 20.0 * std::log10 (second + 1e-12));
+        check (first < 1.0e-5 && second < 1.0e-5, "full digital, the repeats are the input itself, not crushed nor filtered");
+    }
+
     // Feedback.
     {
         auto s = clean();

@@ -69,9 +69,8 @@ Colour EchoDisplay::characterColour (float c)
 
 String EchoDisplay::zoneName (float c)
 {
-    if (c < 0.12f) return "ELECTRIC";
-    if (c < 0.38f) return "12-BIT";
-    if (c < 0.62f) return "CLEAN";
+    if (c < 0.3f) return "PURE DIGITAL";
+    if (c < 0.6f) return "DIGITAL";
     if (c < 0.86f) return "TAPE";
     return "WORN TAPE";
 }
@@ -234,8 +233,6 @@ void EchoDisplay::paintMachine (Graphics& g, Rectangle<float> area, const ebx::S
         grid = grid.withSizeKeepingCentre (cell * columns, cell * rows);
 
         const auto lit = (int) (scan * columns * rows);
-        const auto glitch = ebx::digitalAmount (s.character);
-        Random random ((int64) (Time::getMillisecondCounter() / 90));
 
         for (int r = 0; r < rows; ++r)
         {
@@ -243,10 +240,7 @@ void EchoDisplay::paintMachine (Graphics& g, Rectangle<float> area, const ebx::S
             {
                 const auto index = r * columns + k;
                 const auto since = (lit - index + columns * rows) % (columns * rows);
-                auto strength = s.freeze ? 0.55f : jmax (0.08f, 1.0f - (float) since / 10.0f);
-
-                if (random.nextFloat() < 0.08f * glitch)
-                    strength = jmax (strength, 0.7f);
+                const auto strength = s.freeze ? 0.55f : jmax (0.08f, 1.0f - (float) since / 10.0f);
 
                 g.setColour (colour.withAlpha (strength * chipAlpha * 0.85f));
                 g.fillRect (Rectangle<float> (grid.getX() + (float) k * cell, grid.getY() + (float) r * cell, cell, cell).reduced (1.5f));
@@ -394,17 +388,10 @@ void EchoDisplay::paintRepeats (Graphics& g, Rectangle<float> area, const ebx::S
 
         for (int side = 0; side < 2; ++side)
         {
-            auto h = heightOf (r.level[side]) * halfHeight;
+            const auto h = heightOf (r.level[side]) * halfHeight;
 
             if (h < 0.75f)
                 continue;
-
-            // Digital steps the height into blocks.
-            if (digital > 0.2f)
-            {
-                const auto step = 3.0f + 6.0f * digital;
-                h = jmax (step, std::round (h / step) * step);
-            }
 
             const auto direction = side == 0 ? -1.0f : 1.0f;
             const auto lit = colour.interpolatedWith (Colours::white, 0.6f * flash);
@@ -433,33 +420,26 @@ void EchoDisplay::paintRepeats (Graphics& g, Rectangle<float> area, const ebx::S
                 g.strokePath (mound, PathStrokeType (1.2f));
             }
 
-            // Clean: a sharp line with a dot on top. Digital: a block, its
-            // scanlines showing.
+            // Digital: a sharp line with a dot on top, the more exact the more
+            // digital, with a glow around it.
             const auto crisp = (1.0f - analog) * (1.0f - analog);
 
             if (crisp > 0.0f)
             {
-                const auto barWidth = 2.0f + 5.0f * digital;
+                const auto barWidth = 2.0f + digital;
                 const auto bar = side == 0 ? Rectangle<float> (baseX - barWidth * 0.5f, mid - h, barWidth, h)
                                            : Rectangle<float> (baseX - barWidth * 0.5f, mid, barWidth, h);
 
-                g.setColour (lit.withAlpha (0.18f * crisp * alpha));
-                g.fillRect (bar.expanded (3.0f, 0.0f));
+                g.setColour (lit.withAlpha ((0.12f + 0.12f * digital) * crisp * alpha));
+                g.fillRect (bar.expanded (3.0f + 3.0f * digital, 0.0f));
                 g.setColour (lit.withAlpha (crisp * alpha));
                 g.fillRect (bar);
 
-                if (digital > 0.2f)
-                {
-                    g.setColour (deep.withAlpha (0.7f * digital));
-
-                    for (auto y = bar.getY() + 2.0f; y < bar.getBottom(); y += 3.0f)
-                        g.fillRect (bar.getX(), y, bar.getWidth(), 1.0f);
-                }
-                else
-                {
-                    g.setColour (lit.withAlpha (crisp * alpha));
-                    g.fillEllipse (Rectangle<float> (5.0f, 5.0f).withCentre ({ baseX, mid + direction * h }));
-                }
+                const auto tip = Point<float> (baseX, mid + direction * h);
+                g.setColour (lit.withAlpha (0.3f * digital * crisp * alpha));
+                g.fillEllipse (Rectangle<float> (11.0f, 11.0f).withCentre (tip));
+                g.setColour (lit.withAlpha (crisp * alpha));
+                g.fillEllipse (Rectangle<float> (5.0f, 5.0f).withCentre (tip));
             }
         }
     }

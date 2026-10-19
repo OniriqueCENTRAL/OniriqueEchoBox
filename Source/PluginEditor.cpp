@@ -214,10 +214,10 @@ EchoBoxEditor::EchoBoxEditor (EchoBoxProcessor& p)
     describe ({ &mix }, "Mix : de l'entrée seule (0) aux échos seuls (100). Au milieu, les deux à plein.");
     describe ({ &headButtons[0], &headButtons[1], &headButtons[2] }, "Les têtes de lecture, comme sur un écho à bande multi-têtes : la tête 1 lit au temps choisi, la 2 au double, la 3 au triple. Plusieurs à la fois donnent des rythmes ; elles se renvoient toutes dans le feedback.");
     describe ({ &freezeButton }, "Freeze : fige ce qui est sur la bande et le fait tourner en boucle, sans perte, pendant que tu joues par-dessus.");
-    describe ({ &character }, "Character : le voyage du delay. À gauche, un numérique électrique (peu de bits, fréquence basse, repliement) ; vers le quart, une machine 12 bits ; au milieu, un numérique parfaitement propre ; vers les trois quarts, une bande chaude ; tout à droite, une bande usée, sombre, saturée, qui pleure.");
+    describe ({ &character }, "Character : le voyage du delay. Tout à gauche, un numérique pur : chaque répétition est la copie exacte du son, sans filtre, sans couleur, et le temps change net. En allant vers le milieu, les répétitions s'adoucissent à peine. Vers les trois quarts, une bande chaude qui sature doucement ; tout à droite, une bande usée, sombre, saturée, qui pleure.");
     describe ({ &tone }, "Tone : la couleur des répétitions. À gauche, de plus en plus sombres à chaque passage ; à droite, plus brillantes et plus fines.");
     describe ({ &pitch }, "Pitch : chaque répétition monte ou descend de ce nombre de demi-tons, à la façon des pitch shifters numériques des années 80 : +12 grimpe d'octave en octave, -5 tombe en cascade.");
-    describe ({ &wobble }, "Wobble : l'instabilité du temps. Côté bande, le pleurage lent et le scintillement rapide d'un moteur fatigué ; côté numérique, des sauts d'horloge qui font gazouiller les échos.");
+    describe ({ &wobble }, "Wobble : l'instabilité du temps. Côté bande, le pleurage lent et le scintillement rapide d'un moteur fatigué ; côté numérique, une modulation régulière et nette, gauche et droite opposées, comme un chorus.");
     describe ({ &pingPong }, "Ping-Pong : à 0, chaque côté a ses propres échos ; à 100, ils passent d'un côté à l'autre, gauche, droite, gauche...");
     describe ({ &space }, "Space : la réverbe dans laquelle tombent les répétitions. Côté bande, elle prend le son d'un ressort.");
     describe ({ &output }, "Out : le niveau de tout ce qui sort.");

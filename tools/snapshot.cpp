@@ -226,7 +226,7 @@ int selfTest()
             return 20.0 * std::log10 (error + 1.0e-12);
         };
 
-        const auto mono = worst (1, "Multi-Head Tape"), stereo = worst (2, "Electric Glitch");
+        const auto mono = worst (1, "Multi-Head Tape"), stereo = worst (2, "Crystal Ping-Pong");
         std::printf ("    all dry, against the input: %.1f dB from one channel, %.1f dB from two\n", mono, stereo);
         check (mono < -120.0, "one channel, all dry, comes out on both as it went in");
         check (stereo < -120.0, "and so do two");
@@ -280,7 +280,7 @@ int selfTest()
         using P = onirique::EchoBoxProcessor;
 
         check (processor->getPresetTypes ("Slapback") == P::tape, "a slapback is tape");
-        check (processor->getPresetTypes ("12-Bit Machine") == P::digital, "a 12-bit machine is digital");
+        check (processor->getPresetTypes ("Studio Digital") == P::digital, "a studio digital is digital");
         check (processor->getPresetTypes ("Octave Cascade") == (P::digital | P::pitched), "an octave cascade is digital, with pitch");
         check (processor->getPresetTypes ("Multi-Head Tape") == (P::tape | P::rhythmic), "three heads make a rhythm");
         check (processor->getPresetTypes ("no such preset") == 0, "a preset that is not there has no type");

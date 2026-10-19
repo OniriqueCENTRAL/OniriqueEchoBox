@@ -202,7 +202,7 @@ namespace
             { "Ping-Pong Eighths", { { "sync", 1.0f }, { "division", 5.0f }, { "feedback", 55.0f }, { "mix", 35.0f },
                                      { "character", 46.0f }, { "wobble", 0.0f }, { "pingpong", 100.0f } } },
 
-            { "12-Bit Machine", { { "time", 250.0f }, { "feedback", 50.0f }, { "character", 25.0f }, { "wobble", 0.0f } } },
+            { "Studio Digital", { { "time", 250.0f }, { "feedback", 50.0f }, { "character", 25.0f }, { "wobble", 0.0f } } },
 
             { "Telephone Line", { { "time", 200.0f }, { "feedback", 35.0f }, { "character", 15.0f }, { "tone", 60.0f },
                                   { "wobble", 10.0f } } },
@@ -213,8 +213,11 @@ namespace
             { "Robot Voice", { { "time", 25.0f }, { "feedback", 85.0f }, { "mix", 50.0f }, { "character", 3.0f },
                                { "wobble", 0.0f } } },
 
-            { "Electric Glitch", { { "time", 90.0f }, { "feedback", 70.0f }, { "mix", 45.0f }, { "character", 0.0f },
-                                   { "wobble", 70.0f }, { "pingpong", 50.0f } } },
+            { "Crystal Ping-Pong", { { "time", 90.0f }, { "feedback", 70.0f }, { "mix", 45.0f }, { "character", 0.0f },
+                                     { "wobble", 0.0f }, { "pingpong", 70.0f } } },
+
+            { "Digital Chorus Echo", { { "time", 140.0f }, { "feedback", 35.0f }, { "mix", 40.0f }, { "character", 10.0f },
+                                       { "wobble", 55.0f }, { "space", 15.0f } } },
 
             // Pitch.
             { "Octave Cascade", { { "time", 220.0f }, { "feedback", 60.0f }, { "mix", 40.0f }, { "character", 28.0f },
@@ -226,7 +229,7 @@ namespace
             { "Falling Down", { { "time", 180.0f }, { "feedback", 70.0f }, { "character", 35.0f }, { "pitch", -5.0f },
                                 { "pingpong", 60.0f }, { "wobble", 10.0f } } },
 
-            { "Circuit Bent", { { "time", 140.0f }, { "feedback", 55.0f }, { "character", 8.0f }, { "pitch", -12.0f },
+            { "Sub Cascade", { { "time", 140.0f }, { "feedback", 55.0f }, { "character", 8.0f }, { "pitch", -12.0f },
                                 { "wobble", 50.0f } } },
 
             { "Tape Riser", { { "time", 260.0f }, { "feedback", 72.0f }, { "mix", 40.0f }, { "character", 82.0f },

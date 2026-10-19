@@ -224,8 +224,6 @@ void Echo::reset()
         std::fill (c.line.begin(), c.line.end(), 0.0f);
         c.write = 0;
         c.lp1 = c.lp2 = c.hp = 0.0f;
-        c.heldPhase = 1.0f;
-        c.held = 0.0f;
         c.looped = 0.0f;
         c.shifter.reset();
     }
@@ -246,7 +244,7 @@ void Echo::reset()
     pingSmoothed = s.pingPong;
     wowPhase = flutterPhase = 0.0;
     drift = driftTarget = driftCountdown = 0.0f;
-    stepped = steppedTarget = stepCountdown = 0.0f;
+    sweepPhase = 0.0;
 }
 
 float Echo::readLine (int channel, double delaySamples) const noexcept
@@ -307,26 +305,27 @@ void Echo::process (const float* const* in, float* const* out, int numSamples) n
     // there almost at once.
     const auto glide = (double) onePole (sampleRate, 0.03 + 0.5 * s.character);
 
-    const auto digital = digitalAmount (s.character), analog = analogAmount (s.character);
-    const auto bits = std::pow (2.0f, crushBits (s.character) - 1.0f);
-    const auto hold = holdHz (s.character, sr) / sr;
+    const auto analog = analogAmount (s.character);
     const auto drive = tapeDrive (s.character);
-    const auto lp = cutoffCoefficient (std::min (loopLowpassHz (s), 0.45f * sr), sampleRate);
+
+    // Digital, the repeats are not filtered at all: what comes back is what went in.
+    const auto lowpassHz = loopLowpassHz (s);
+    const auto filtered = lowpassHz < openLowpassHz (sr);
+    const auto lp = cutoffCoefficient (std::min (lowpassHz, openLowpassHz (sr)), sampleRate);
     const auto hp = cutoffCoefficient (loopHighpassHz (s), sampleRate);
     const auto ratio = std::pow (2.0f, std::clamp (s.pitch, -kMaxPitch, kMaxPitch) / 12.0f);
     const auto hiss = (s.freeze ? 0.0f : 1.0f) * analog * analog * 0.00018f;
 
     // The unsteadiness, in samples: the slow wow and quick flutter of tape,
-    // and the jumps of a digital clock.
+    // and the even sweep of a digital modulation, the two sides opposed.
     const auto w = std::pow (std::clamp (s.wobble, 0.0f, 1.0f), 1.5f);
     const auto tapeWeight = s.character, chipWeight = 1.0f - s.character;
     const auto wowDepth = w * 2.6f * 0.001f * sr * tapeWeight;
     const auto flutterDepth = w * 0.13f * 0.001f * sr * tapeWeight;
     const auto driftDepth = w * 3.5f * 0.001f * sr * tapeWeight;
-    const auto stepDepth = w * 1.7f * 0.001f * sr * chipWeight;
-    const auto wowStep = 0.55 / sampleRate, flutterStep = 7.1 / sampleRate;
+    const auto sweepDepth = w * 1.4f * 0.001f * sr * chipWeight;
+    const auto wowStep = 0.55 / sampleRate, flutterStep = 7.1 / sampleRate, sweepStep = 0.8 / sampleRate;
     const auto driftSmooth = onePole (sampleRate, 0.25);
-    const auto stepSmooth = onePole (sampleRate, 0.007);
 
     const auto quick = onePole (sampleRate, 0.03), slow = onePole (sampleRate, 0.08);
     const auto wantedFreeze = s.freeze ? 1.0f : 0.0f;
@@ -365,19 +364,15 @@ void Echo::process (const float* const* in, float* const* out, int numSamples) n
 
         drift += (driftTarget - drift) * driftSmooth;
 
-        if ((stepCountdown -= 1.0f) <= 0.0f)
-        {
-            steppedTarget = nextNoise();
-            stepCountdown = sr / (5.0f + 4.0f * (0.5f + 0.5f * nextNoise()));
-        }
-
-        stepped += (steppedTarget - stepped) * stepSmooth;
+        sweepPhase += sweepStep;
+        if (sweepPhase >= 1.0) sweepPhase -= 1.0;
 
         const auto wow = (float) std::sin (kTwoPi * wowPhase);
-        wobbleShown = tapeWeight * (0.7f * wow + 0.3f * drift) + chipWeight * stepped;
+        const auto sweep = (float) std::sin (kTwoPi * sweepPhase);
+        wobbleShown = tapeWeight * (0.7f * wow + 0.3f * drift) + chipWeight * sweep;
 
-        // What the heads hear, run through the loop: the pitch, the filters
-        // of the tape or the converters, and what a chip does to it.
+        // What the heads hear, run through the loop: the pitch, and the
+        // filters of the tape.
         float wet[kMaxChannels] = {}, back[kMaxChannels] = {};
         const auto loopLength = std::max (2.0, std::round (glidedSamples * top));
 
@@ -390,7 +385,7 @@ void Echo::process (const float* const* in, float* const* out, int numSamples) n
             const auto wowC = c == 0 ? wow : (float) std::sin (kTwoPi * (wowPhase + offset));
             const auto flutterC = (float) std::sin (kTwoPi * (flutterPhase + offset));
             const auto unsteady = wowDepth * wowC + flutterDepth * flutterC + driftDepth * drift
-                                  + stepDepth * (c == 0 ? stepped : -stepped);
+                                  + sweepDepth * (c == 0 ? sweep : -sweep);
 
             float z = 0.0f;
 
@@ -403,26 +398,20 @@ void Echo::process (const float* const* in, float* const* out, int numSamples) n
             else
                 ch.shifter.process (z, 1.0f);
 
-            ch.lp1 += (z - ch.lp1) * lp;
-            ch.lp2 += (ch.lp1 - ch.lp2) * lp;
-            z = ch.lp2;
+            if (filtered)
+            {
+                ch.lp1 += (z - ch.lp1) * lp;
+                ch.lp2 += (ch.lp1 - ch.lp2) * lp;
+                z = ch.lp2;
+            }
+            else
+            {
+                ch.lp1 = ch.lp2 = z;
+            }
 
             // One pole of high cut's complement: what is left over the low cut.
             ch.hp += (z - ch.hp) * hp;
             z -= ch.hp;
-
-            if (digital > 0.0f)
-            {
-                ch.heldPhase += hold;
-
-                if (ch.heldPhase >= 1.0f)
-                {
-                    ch.heldPhase -= std::floor (ch.heldPhase);
-                    ch.held = z;
-                }
-
-                z = std::round (ch.held * bits) / bits;
-            }
 
             wet[c] = z * heard;
             back[c] = z * perHead * feedbackSmoothed;
