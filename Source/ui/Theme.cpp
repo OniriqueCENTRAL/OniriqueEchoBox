@@ -1,60 +1,10 @@
 #include "Theme.h"
 #include "OniriqueKnob.h"
-#include <OniriqueLicenseData.h>
 
 namespace onirique::theme
 {
 
 using namespace juce;
-
-namespace
-{
-// The brand typefaces, shared by the open editors (message thread only): created when the first one opens,
-// destroyed when the last one closes. Only a counter and a raw pointer are static: nothing is destroyed when the
-// plugin is unloaded.
-struct Faces
-{
-    Typeface::Ptr body, mono;
-};
-Faces* faces = nullptr;
-int faceUsers = 0;
-} // namespace
-
-FontScope::FontScope()
-{
-    if (faceUsers++ == 0)
-    {
-        faces = new Faces();
-        faces->body = Typeface::createSystemTypefaceFor (OniriqueLicenseData::HankenGrotesk600_ttf, OniriqueLicenseData::HankenGrotesk600_ttfSize);
-        faces->mono = Typeface::createSystemTypefaceFor (OniriqueLicenseData::JetBrainsMono500_ttf, OniriqueLicenseData::JetBrainsMono500_ttfSize);
-    }
-}
-
-FontScope::~FontScope()
-{
-    if (--faceUsers == 0) { delete faces; faces = nullptr; }
-}
-
-Font displayFont (float height, bool heavy)
-{
-    if (faces != nullptr && faces->body != nullptr)
-        return Font (FontOptions (faces->body).withHeight (height));
-   #if JUCE_WINDOWS
-    const String family ("Segoe UI");
-   #elif JUCE_MAC
-    const String family ("Helvetica Neue");
-   #else
-    const String family ("DejaVu Sans");
-   #endif
-    return Font (FontOptions (family, height, heavy ? Font::bold : Font::plain));
-}
-
-Font monoFont (float height)
-{
-    if (faces != nullptr && faces->mono != nullptr)
-        return Font (FontOptions (faces->mono).withHeight (height));
-    return Font (FontOptions (Font::getDefaultMonospacedFontName(), height, Font::plain));
-}
 
 OniriqueLookAndFeel::OniriqueLookAndFeel()
 {
