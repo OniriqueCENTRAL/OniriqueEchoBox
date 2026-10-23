@@ -227,6 +227,11 @@ EchoBoxEditor::EchoBoxEditor (EchoBoxProcessor& p)
 
     licenseOverlay = std::make_unique<onirique::license::Overlay> ("ECHOBOX", processor.license);
     addAndMakeVisible (*licenseOverlay);
+   #if ONIRIQUE_UI_TEST
+    // local checks only (never in published builds): screenshots without the activation page
+    if (juce::SystemStats::getEnvironmentVariable ("ONIRIQUE_UI_TEST", {}).contains ("nolicense"))
+        licenseOverlay->setVisible (false);
+   #endif
 
     setResizable (true, true);
     setResizeLimits (980, 620, 2200, 1300);
@@ -434,16 +439,9 @@ void EchoBoxEditor::paintHeader (Graphics& g, Rectangle<int> header)
     const auto area = header.toFloat();
     const auto seconds = (Time::getMillisecondCounterHiRes() - openedAt) * 0.001;
 
-    // The crimson of the range: darkest at the sigil, brightest behind the
-    // name, and falling away again to the right and towards the foot.
-    ColourGradient ground (Colour (0xff2c060b), 0.0f, 0.0f, Colour (0xff3b080e), area.getRight(), 0.0f, false);
-    ground.addColour (0.32, Colour (0xff7a0e1c));
-    ground.addColour (0.7, Colour (0xff5a0a14));
+    // PRO SERIES header: the deep black of the window, a dark red glow behind the name.
+    ColourGradient ground (blood.withAlpha (0.45f), (float) kTitleLeft + 80.0f, area.getCentreY(), blood.withAlpha (0.0f), (float) kTitleLeft + 80.0f + area.getWidth() * 0.45f, area.getCentreY(), true);
     g.setGradientFill (ground);
-    g.fillRect (area);
-
-    g.setGradientFill (ColourGradient (Colours::transparentBlack, 0.0f, area.getY(),
-                                       Colour (0x73000000), 0.0f, area.getBottom(), false));
     g.fillRect (area);
 
     if (logo.isValid())
@@ -462,7 +460,7 @@ void EchoBoxEditor::paintHeader (Graphics& g, Rectangle<int> header)
     g.drawText ("ONIRIQUE", area.withTrimmedLeft ((float) kTitleLeft).withWidth (nameWidth + 4.0f),
                 Justification::centredLeft, false);
 
-    g.setColour (Colour (0xffe3b5ba));
+    g.setColour (ember);
     g.setFont (titleFont (false));
     g.drawText ("ECHOBOX", area.withTrimmedLeft ((float) kTitleLeft + nameWidth + 10.0f).withWidth (280.0f),
                 Justification::centredLeft, false);
@@ -487,7 +485,7 @@ void EchoBoxEditor::paintHeader (Graphics& g, Rectangle<int> header)
     // along it from left to right and comes round again.
     const auto footY = area.getBottom() - 2.0f;
 
-    g.setColour (Colour (0x30ffd2d6));
+    g.setColour (line);
     g.fillRect (0.0f, footY, area.getWidth(), 1.0f);
 
     const auto length = jmax (160.0f, area.getWidth() * 0.22f);
@@ -511,7 +509,15 @@ void EchoBoxEditor::paintHeader (Graphics& g, Rectangle<int> header)
 
 void EchoBoxEditor::paint (Graphics& g)
 {
+    // PRO SERIES ground: deep black, very discreet dark red glows
     g.fillAll (night);
+    {
+        const auto W = (float) getWidth(), H = (float) getHeight();
+        g.setGradientFill (ColourGradient (blood.withAlpha (0.5f), W * 0.25f, H * 0.5f, blood.withAlpha (0.0f), W * 0.25f + W * 0.6f, H * 0.5f, true));
+        g.fillAll();
+        g.setGradientFill (ColourGradient (blood.withAlpha (0.22f), W * 0.92f, H * 1.05f, blood.withAlpha (0.0f), W * 0.92f - W * 0.45f, H * 1.05f, true));
+        g.fillAll();
+    }
 
     paintHeader (g, getLocalBounds().removeFromTop (kHeaderHeight));
 
@@ -521,10 +527,13 @@ void EchoBoxEditor::paint (Graphics& g)
     {
         const auto panel = panels[i].toFloat().reduced (0.5f);
 
-        g.setColour (deep);
-        g.fillRoundedRectangle (panel, 10.0f);
+        // dark glass: charcoal, a very light pale-rose sheen at the top, a fine rule
+        g.setColour (deep.withAlpha (0.94f));
+        g.fillRoundedRectangle (panel, 12.0f);
+        g.setGradientFill (ColourGradient (bone.withAlpha (0.035f), 0.0f, panel.getY(), bone.withAlpha (0.0f), 0.0f, panel.getY() + panel.getHeight() * 0.7f, false));
+        g.fillRoundedRectangle (panel, 12.0f);
         g.setColour (line);
-        g.drawRoundedRectangle (panel, 10.0f, 1.0f);
+        g.drawRoundedRectangle (panel, 12.0f, 1.0f);
 
         g.setColour (haze);
         g.setFont (capsFont (9.5f).withExtraKerningFactor (0.3f));

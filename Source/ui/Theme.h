@@ -10,31 +10,28 @@ using juce::Colour;
 
 // The palette the rest of the Onirique range uses: a near-black ground, a
 // blood-dark panel, and a single ember accent that carries every active state.
-inline const Colour night   { 0xff0d0809 };
-inline const Colour deep    { 0xff1a080a };
-inline const Colour deep2   { 0xff2a0a0e };
-inline const Colour blood   { 0xff5c0008 };
-inline const Colour ember   { 0xffe23444 };
+// PRO SERIES tones (those of VOCAL MINI): deep black, neutral charcoal, dark red, red accent.
+inline const Colour night   { 0xff09080a };
+inline const Colour deep    { 0xff121012 };
+inline const Colour deep2   { 0xff1c1517 };
+inline const Colour blood   { 0xff3d0910 };
+inline const Colour ember   { 0xffe5384a };
 inline const Colour emberLit{ 0xffff5a68 };
-inline const Colour mist    { 0xfff6eeee };
-inline const Colour bone    { 0xffffecee };
-inline const Colour haze    { 0xffa88f92 };
-inline const Colour line    { 0x21ffd2d6 };
+inline const Colour mist    { 0xfff2ecec };
+inline const Colour bone    { 0xfffff4f5 };
+inline const Colour haze    { 0xff978c8f };
+inline const Colour line    { 0x1affd6da };
 
-inline juce::Font displayFont (float height, bool heavy = true)
+/** The brand typefaces (Hanken Grotesk for names and titles, JetBrains Mono for values), loaded while an editor
+    is open (FontScope): nothing static outlives the plugin. Without an open editor, system equivalents. */
+struct FontScope
 {
-    // Named outright: the "default sans-serif" placeholder does not survive
-    // being put in FontOptions, and what comes out the other end is a serif.
-   #if JUCE_WINDOWS
-    const juce::String family ("Segoe UI");
-   #elif JUCE_MAC
-    const juce::String family ("Helvetica Neue");
-   #else
-    const juce::String family ("DejaVu Sans");
-   #endif
+    FontScope();
+    ~FontScope();
+    JUCE_DECLARE_NON_COPYABLE (FontScope)
+};
 
-    return juce::Font (juce::FontOptions (family, height, heavy ? juce::Font::bold : juce::Font::plain));
-}
+juce::Font displayFont (float height, bool heavy = true);
 
 /** The wide, heavy capitals used for every control name across the range. */
 inline juce::Font capsFont (float height)
@@ -42,11 +39,7 @@ inline juce::Font capsFont (float height)
     return displayFont (height).withExtraKerningFactor (0.14f);
 }
 
-inline juce::Font monoFont (float height)
-{
-    return juce::Font (juce::FontOptions (juce::Font::getDefaultMonospacedFontName(), height,
-                                          juce::Font::plain));
-}
+juce::Font monoFont (float height);
 
 /** The ember-arc knob and segmented controls used across the range. */
 class OniriqueLookAndFeel final : public juce::LookAndFeel_V4

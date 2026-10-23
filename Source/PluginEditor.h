@@ -158,6 +158,7 @@ private:
     /** The licence badge and its activation page. Declared last and added
         last: it lies over everything else. */
     std::unique_ptr<onirique::license::Overlay> licenseOverlay;
+    onirique::theme::FontScope fontScope;   // the brand typefaces, while the editor is open
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (EchoBoxEditor)
 };
