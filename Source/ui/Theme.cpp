@@ -114,6 +114,33 @@ void OniriqueLookAndFeel::drawButtonBackground (Graphics& g, Button& button, con
     const auto led = Rectangle<float> (7.0f, 7.0f)
                          .withCentre ({ bounds.getX() + radius * 0.9f, bounds.getCentreY() });
 
+    // Or the four-pointed star, as on the licence badge's « Activé ».
+    if (button.getProperties().contains ("star"))
+    {
+        auto star = [c = led.getCentre()] (float r)
+        {
+            Path p;
+            const auto w = r * 0.24f * 0.35f;
+            p.startNewSubPath (c.x, c.y - r);
+            p.quadraticTo (c.x + w, c.y - w, c.x + r, c.y);
+            p.quadraticTo (c.x + w, c.y + w, c.x, c.y + r);
+            p.quadraticTo (c.x - w, c.y + w, c.x - r, c.y);
+            p.quadraticTo (c.x - w, c.y - w, c.x, c.y - r);
+            p.closeSubPath();
+            return p;
+        };
+
+        if (on)
+        {
+            g.setColour (ember.withAlpha (0.35f));
+            g.fillPath (star (7.5f));
+        }
+
+        g.setColour (on ? emberLit.interpolatedWith (bone, 0.35f) : Colour (0x33ffd2d6));
+        g.fillPath (star (5.0f));
+        return;
+    }
+
     g.setColour (on ? ember : Colour (0x33ffd2d6));
     g.fillEllipse (led);
 

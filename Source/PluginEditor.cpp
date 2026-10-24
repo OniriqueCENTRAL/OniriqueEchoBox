@@ -163,6 +163,8 @@ EchoBoxEditor::EchoBoxEditor (EchoBoxProcessor& p)
         addAndMakeVisible (*b);
     }
 
+    bypassButton.getProperties().set ("star", true);
+
     buttonAttachments.push_back (std::make_unique<ButtonAttachment> (state, "sync", syncButton));
     buttonAttachments.push_back (std::make_unique<ButtonAttachment> (state, "freeze", freezeButton));
     buttonAttachments.push_back (std::make_unique<ButtonAttachment> (state, "bypass", bypassButton));
