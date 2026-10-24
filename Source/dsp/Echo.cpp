@@ -214,6 +214,11 @@ void Echo::prepare (double rate, int inputs, int outputs)
     }
 
     space.prepare (sampleRate);
+
+    wow.setRate (0.55, sampleRate);
+    flutter.setRate (7.1, sampleRate);
+    sweep.setRate (0.8, sampleRate);
+
     reset();
 }
 
@@ -237,14 +242,22 @@ void Echo::reset()
     pitchAmount = std::abs (s.pitch) > 0.05f ? 1.0f : 0.0f;
     bypassAmount = s.bypass ? 1.0f : 0.0f;
     outGain = std::pow (10.0f, s.outDb / 20.0f);
+    delayOutGain = std::pow (10.0f, s.delayOutDb / 20.0f);
+    fadingFrom = glidedSamples;
+    fade = 1.0f;
+    spaceIdle = true;
     dryAmount = dryGain (s.mix);
     wetAmount = wetGain (s.mix);
     feedbackSmoothed = s.feedback;
     spaceSmoothed = s.space;
     pingSmoothed = s.pingPong;
-    wowPhase = flutterPhase = 0.0;
+    for (auto* rotor : { &wow, &flutter, &sweep })
+    {
+        rotor->s = 0.0f;
+        rotor->c = 1.0f;
+    }
+
     drift = driftTarget = driftCountdown = 0.0f;
-    sweepPhase = 0.0;
 }
 
 float Echo::readLine (int channel, double delaySamples) const noexcept
@@ -301,9 +314,11 @@ void Echo::process (const float* const* in, float* const* out, int numSamples) n
     const auto longest = (double) (kMaxLineSeconds * sampleRate) / top;
     const auto target = std::min (std::max (s.timeMs, kMinTimeMs) * sampleRate / 1000.0, longest);
 
-    // Tape glides to a new time, its pitch bending on the way; digital is
-    // there almost at once.
+    // Tape glides to a new time, its pitch bending on the way. Digital jumps
+    // to it, crossfading from the old one, so that nothing bends.
     const auto glide = (double) onePole (sampleRate, 0.03 + 0.5 * s.character);
+    const auto jumps = s.character < 0.5f;
+    const auto fadeStep = 1.0f / (0.04f * sr);
 
     const auto analog = analogAmount (s.character);
     const auto drive = tapeDrive (s.character);
@@ -324,7 +339,6 @@ void Echo::process (const float* const* in, float* const* out, int numSamples) n
     const auto flutterDepth = w * 0.13f * 0.001f * sr * tapeWeight;
     const auto driftDepth = w * 3.5f * 0.001f * sr * tapeWeight;
     const auto sweepDepth = w * 1.4f * 0.001f * sr * chipWeight;
-    const auto wowStep = 0.55 / sampleRate, flutterStep = 7.1 / sampleRate, sweepStep = 0.8 / sampleRate;
     const auto driftSmooth = onePole (sampleRate, 0.25);
 
     const auto quick = onePole (sampleRate, 0.03), slow = onePole (sampleRate, 0.08);
@@ -332,18 +346,45 @@ void Echo::process (const float* const* in, float* const* out, int numSamples) n
     const auto wantedPitch = std::abs (s.pitch) > 0.05f ? 1.0f : 0.0f;
     const auto wantedBypass = s.bypass ? 1.0f : 0.0f;
     const auto wantedOut = std::pow (10.0f, s.outDb / 20.0f);
+    const auto wantedDelayOut = std::pow (10.0f, s.delayOutDb / 20.0f);
     const auto wantedDry = dryGain (s.mix), wantedWet = wetGain (s.mix);
     const auto wantedFeedback = std::clamp (s.feedback, 0.0f, kMaxFeedback);
 
     const auto sides = numOut;
 
+    // The right side's wow and flutter run a little ahead of the left's.
+    const auto aheadSin = std::sin (kTwoPi * 0.23f), aheadCos = std::cos (kTwoPi * 0.23f);
+
+    for (auto* rotor : { &wow, &flutter, &sweep })
+        rotor->normalise();
+
     for (int i = 0; i < numSamples; ++i)
     {
-        glidedSamples += (target - glidedSamples) * glide;
+        if (! jumps)
+            glidedSamples += (target - glidedSamples) * glide;
+        else if (fade >= 1.0f && std::abs (target - glidedSamples) > 0.5)
+        {
+            fadingFrom = glidedSamples;
+            glidedSamples = target;
+            fade = 0.0f;
+        }
+
+        // Equal power: the old time and the new one are not the same sound.
+        const auto fading = fade < 1.0f;
+        float fadeIn = 1.0f, fadeOut = 0.0f;
+
+        if (fading)
+        {
+            fade = std::min (1.0f, fade + fadeStep);
+            fadeIn = std::sin (fade * kPi * 0.5f);
+            fadeOut = std::cos (fade * kPi * 0.5f);
+        }
+
         freezeAmount += (wantedFreeze - freezeAmount) * quick;
         pitchAmount += (wantedPitch - pitchAmount) * slow;
         bypassAmount += (wantedBypass - bypassAmount) * quick;
         outGain += (wantedOut - outGain) * quick;
+        delayOutGain += (wantedDelayOut - delayOutGain) * quick;
         dryAmount += (wantedDry - dryAmount) * quick;
         wetAmount += (wantedWet - wetAmount) * quick;
         feedbackSmoothed += (wantedFeedback - feedbackSmoothed) * quick;
@@ -351,10 +392,9 @@ void Echo::process (const float* const* in, float* const* out, int numSamples) n
         pingSmoothed += (s.pingPong - pingSmoothed) * quick;
 
         // The tape's unsteadiness.
-        wowPhase += wowStep;
-        flutterPhase += flutterStep;
-        if (wowPhase >= 1.0) wowPhase -= 1.0;
-        if (flutterPhase >= 1.0) flutterPhase -= 1.0;
+        wow.step();
+        flutter.step();
+        sweep.step();
 
         if ((driftCountdown -= 1.0f) <= 0.0f)
         {
@@ -364,12 +404,7 @@ void Echo::process (const float* const* in, float* const* out, int numSamples) n
 
         drift += (driftTarget - drift) * driftSmooth;
 
-        sweepPhase += sweepStep;
-        if (sweepPhase >= 1.0) sweepPhase -= 1.0;
-
-        const auto wow = (float) std::sin (kTwoPi * wowPhase);
-        const auto sweep = (float) std::sin (kTwoPi * sweepPhase);
-        wobbleShown = tapeWeight * (0.7f * wow + 0.3f * drift) + chipWeight * sweep;
+        wobbleShown = tapeWeight * (0.7f * wow.s + 0.3f * drift) + chipWeight * sweep.s;
 
         // What the heads hear, run through the loop: the pitch, and the
         // filters of the tape.
@@ -380,23 +415,31 @@ void Echo::process (const float* const* in, float* const* out, int numSamples) n
         {
             auto& ch = channels[(size_t) c];
 
-            // The right side is a little behind the left in its wow.
-            const auto offset = c == 0 ? 0.0f : 0.23f;
-            const auto wowC = c == 0 ? wow : (float) std::sin (kTwoPi * (wowPhase + offset));
-            const auto flutterC = (float) std::sin (kTwoPi * (flutterPhase + offset));
+            const auto wowC = c == 0 ? wow.s : wow.ahead (aheadSin, aheadCos);
+            const auto flutterC = c == 0 ? flutter.s : flutter.ahead (aheadSin, aheadCos);
             const auto unsteady = wowDepth * wowC + flutterDepth * flutterC + driftDepth * drift
-                                  + sweepDepth * (c == 0 ? sweep : -sweep);
+                                  + sweepDepth * (c == 0 ? sweep.s : -sweep.s);
 
-            float z = 0.0f;
+            float z = 0.0f, was = 0.0f;
 
             for (int head = 1; head <= kNumHeads; ++head)
-                if ((mask & (1 << (head - 1))) != 0)
-                    z += readLine (c, glidedSamples * head + unsteady);
+            {
+                if ((mask & (1 << (head - 1))) == 0)
+                    continue;
+
+                z += readLine (c, glidedSamples * head + unsteady);
+
+                if (fading)
+                    was += readLine (c, fadingFrom * head + unsteady);
+            }
+
+            if (fading)
+                z = z * fadeIn + was * fadeOut;
 
             if (pitchAmount > 0.0005f)
                 z += (ch.shifter.process (z, ratio) - z) * pitchAmount;
             else
-                ch.shifter.process (z, 1.0f);
+                ch.shifter.feed (z);
 
             if (filtered)
             {
@@ -451,8 +494,16 @@ void Echo::process (const float* const* in, float* const* out, int numSamples) n
         // The space the repeats fall into.
         auto wetL = wet[0], wetR = sides > 1 ? wet[1] : wet[0];
 
-        // Always running, so that turning it down lets its tail die away.
+        // Left running while it is heard at all, so that turning it down lets
+        // its tail die away; once it is not, it rests, and starts again empty.
+        if (spaceSmoothed > 1.0e-4f || s.space > 0.0f)
         {
+            if (spaceIdle)
+            {
+                space.reset();
+                spaceIdle = false;
+            }
+
             auto roomL = wetL, roomR = wetR;
             space.process (roomL, roomR, analog);
 
@@ -460,8 +511,12 @@ void Echo::process (const float* const* in, float* const* out, int numSamples) n
             wetL = wetL * (1.0f - 0.35f * send) + roomL * send * 1.3f;
             wetR = wetR * (1.0f - 0.35f * send) + roomR * send * 1.3f;
         }
+        else
+        {
+            spaceIdle = true;
+        }
 
-        const float wetOut[kMaxChannels] = { ceiling (wetL), ceiling (wetR) };
+        const float wetOut[kMaxChannels] = { ceiling (wetL) * delayOutGain, ceiling (wetR) * delayOutGain };
 
         for (int c = 0; c < sides; ++c)
         {

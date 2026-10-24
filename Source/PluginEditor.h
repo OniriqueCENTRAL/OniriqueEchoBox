@@ -94,7 +94,7 @@ private:
 
     // The echo: how far apart, how many times, how much of it; on which
     // heads, on the beat or not, and held for good.
-    Knob time { "TIME" }, feedback { "FEEDBACK" }, mix { "MIX" };
+    Knob time { "TIME" }, feedback { "FEEDBACK" }, mix { "MIX" }, delayOut { "DELAY OUT" };
     TextButton syncButton { "SYNC" }, freezeButton { "FREEZE" };
     TextButton headButtons[ebx::kNumHeads];
     std::unique_ptr<ParameterAttachment> headsAttachment;

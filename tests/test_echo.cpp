@@ -1,5 +1,6 @@
 // The echo without a host: where the repeats land, how loud, on which side,
 // and that nothing it can be set to blows up.
+#include <chrono>
 #include <cstdio>
 #include <functional>
 
@@ -132,6 +133,46 @@ int main()
         std::printf ("    full digital, against the input: %.1f dB on the first repeat, %.1f dB on the second\n",
                      20.0 * std::log10 (first + 1e-12), 20.0 * std::log10 (second + 1e-12));
         check (first < 1.0e-5 && second < 1.0e-5, "full digital, the repeats are the input itself, not crushed nor filtered");
+    }
+
+    // Digital, a new time is crossfaded to: once the fade is over, the
+    // repeats are the input at exactly the new time, with no glide left.
+    {
+        auto s = clean();
+        s.character = 0.0f;
+        const auto noise = mdxtest::makeNoise (1.0, kSr, 0.5f);
+        const auto out = play (s, noise, 0, [] (ebx::Echo& echo, size_t at)
+        {
+            if (at >= ms (500))
+            {
+                auto later = clean();
+                later.character = 0.0f;
+                later.timeMs = 150.0f;
+                echo.setSettings (later);
+            }
+        });
+
+        double error = 0.0;
+
+        for (size_t i = ms (560); i < ms (1000); ++i)
+            error = std::max (error, (double) std::abs (out[0][i] - noise[i - ms (150)]));
+
+        check (error < 1.0e-5, "digital, a new time is there 40 ms later, exactly, without bending the pitch");
+    }
+
+    // The level of the echoes alone.
+    {
+        auto s = clean();
+        s.character = 0.0f;
+        s.delayOutDb = 20.0f * std::log10 (0.5f);
+        const auto noise = mdxtest::makeNoise (0.05, kSr, 0.5f);
+        const auto out = play (s, noise, ms (200));
+        double error = 0.0;
+
+        for (size_t i = 0; i < noise.size(); ++i)
+            error = std::max (error, (double) std::abs (out[0][ms (100) + i] - 0.5f * noise[i]));
+
+        check (error < 1.0e-5, "delay out at -6 dB halves the echoes");
     }
 
     // Feedback.
@@ -287,6 +328,20 @@ int main()
         const auto repeats = ebx::predictRepeats (s, 100.0f, 1000.0f);
         check (repeats.size() == 10 && repeats[0].level[0] > 0.0f && repeats[1].level[0] > repeats[0].level[0] * 0.9f,
                "the drawing has a repeat at each multiple of the time");
+    }
+
+    // The cost: ten seconds of stereo with everything running, timed.
+    {
+        ebx::Settings s;
+        s.heads = 6;
+        s.pitch = 7.0f;
+        s.space = 0.5f;
+        s.wobble = 0.5f;
+        const auto noise = mdxtest::makeNoise (10.0, kSr, 0.3f);
+        const auto start = std::chrono::steady_clock::now();
+        play (s, noise);
+        const auto seconds = std::chrono::duration<double> (std::chrono::steady_clock::now() - start).count();
+        std::printf ("    10 s of stereo, everything on, in %.0f ms: %.0fx faster than real time\n", seconds * 1000.0, 10.0 / seconds);
     }
 
     std::printf (failures == 0 ? "\nall passed\n" : "\n%d FAILED\n", failures);

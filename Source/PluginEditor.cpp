@@ -23,8 +23,8 @@ namespace
     constexpr int kPanelHeading = 26;
 
     // How many controls wide each family is.
-    constexpr int kPanelColumns[] = { 3, 2, 3 };
-    constexpr int kColumns = 8;
+    constexpr int kPanelColumns[] = { 4, 2, 3 };
+    constexpr int kColumns = 9;
     const char* const kPanelNames[] = { "ECHO", "CHARACTER", "COLOUR" };
 
     Font titleFont (bool heavy)
@@ -139,7 +139,7 @@ EchoBoxEditor::EchoBoxEditor (EchoBoxProcessor& p)
     slotBButton.onClick = [this] { processor.switchToSlot (1); };
     copyButton.onClick = [this] { processor.copyToOtherSlot(); };
 
-    const std::pair<Knob*, const char*> knobs[] = { { &feedback, "feedback" }, { &mix, "mix" }, { &character, "character" },
+    const std::pair<Knob*, const char*> knobs[] = { { &feedback, "feedback" }, { &mix, "mix" }, { &delayOut, "delayout" }, { &character, "character" },
                                                     { &tone, "tone" }, { &pitch, "pitch" }, { &wobble, "wobble" },
                                                     { &pingPong, "pingpong" }, { &space, "space" } };
 
@@ -212,6 +212,7 @@ EchoBoxEditor::EchoBoxEditor (EchoBoxProcessor& p)
     describe ({ &syncButton }, "Sync : cale le temps sur le tempo du DAW, en valeurs de notes (1/4, 1/8 pointée, triolets...).");
     describe ({ &feedback }, "Feedback : combien de fois l'écho revient. Au-delà de 100 %, il s'emballe et chante tout seul : la bande sature doucement, le numérique sature franchement.");
     describe ({ &mix }, "Mix : de l'entrée seule (0) aux échos seuls (100). Au milieu, les deux à plein.");
+    describe ({ &delayOut }, "Delay Out : le niveau des échos seuls, de -30 à +6 dB, sans toucher au son direct. En insert, baisse-le pour doser finement la quantité de delay ; Out règle tout ce qui sort.");
     describe ({ &headButtons[0], &headButtons[1], &headButtons[2] }, "Les têtes de lecture, comme sur un écho à bande multi-têtes : la tête 1 lit au temps choisi, la 2 au double, la 3 au triple. Plusieurs à la fois donnent des rythmes ; elles se renvoient toutes dans le feedback.");
     describe ({ &freezeButton }, "Freeze : fige ce qui est sur la bande et le fait tourner en boucle, sans perte, pendant que tu joues par-dessus.");
     describe ({ &character }, "Character : le voyage du delay. Tout à gauche, un numérique pur : chaque répétition est la copie exacte du son, sans filtre, sans couleur, et le temps change net. En allant vers le milieu, les répétitions s'adoucissent à peine. Vers les trois quarts, une bande chaude qui sature doucement ; tout à droite, une bande usée, sombre, saturée, qui pleure.");
@@ -609,13 +610,14 @@ void EchoBoxEditor::resized()
     time.setBounds (cell (0, 0, 0));
     feedback.setBounds (cell (0, 0, 1));
     mix.setBounds (cell (0, 0, 2));
+    delayOut.setBounds (cell (0, 0, 3));
 
     auto button = [] (Rectangle<int> area, int width) { return area.withSizeKeepingCentre (jmin (width, area.getWidth() - 12), 30); };
 
     syncButton.setBounds (button (cell (0, 1, 0), 84));
-    freezeButton.setBounds (button (cell (0, 1, 2), 96));
+    freezeButton.setBounds (button (cell (0, 1, 3), 96));
 
-    auto heads = cell (0, 1, 1);
+    auto heads = cell (0, 1, 1.5f);
     headsHeading = heads.withSizeKeepingCentre (heads.getWidth(), 15).translated (0, -24);
     auto strip = button (heads, 3 * 30 + 2 * 6);
 

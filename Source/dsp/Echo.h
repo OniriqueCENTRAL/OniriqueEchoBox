@@ -41,7 +41,7 @@ struct Settings
     float timeMs = 375.0f;      // where head 1 reads
     float feedback = 0.42f;     // 0 .. kMaxFeedback; over 1, it sings by itself
     float mix = 0.35f;          // 0 dry .. 1 echoes alone
-    float character = 0.72f;    // 0 electric digital .. 0.5 clean .. 1 worn tape
+    float character = 0.72f;    // 0 pure digital .. 0.5 the turn to tape .. 1 worn tape
     int heads = 0;              // a choice of kHeadNames
     float tone = 0.0f;          // -1 dark .. +1 bright and thin
     float pitch = 0.0f;         // semitones each repeat climbs or falls
@@ -49,6 +49,7 @@ struct Settings
     float pingPong = 0.0f;      // 0 each side its own .. 1 the repeats cross over
     float space = 0.0f;         // 0 .. 1: the reverb the repeats fall into
     bool freeze = false;        // what is on the line goes round and round, untouched
+    float delayOutDb = 0.0f;    // the level of the echoes alone, before the mix
     float outDb = 0.0f;
     bool bypass = false;
 };
@@ -122,6 +123,9 @@ public:
     void prepare (double sampleRate);
     void reset();
     float process (float x, float ratio) noexcept;
+
+    /** Only keeps its line filled, for when it is not heard. */
+    void feed (float x) noexcept { buffer[(size_t) write] = x; write = (write + 1) & mask; }
 
 private:
     std::vector<float> buffer;
@@ -212,16 +216,39 @@ private:
     Space space;
     int lineSize = 0;
 
-    double glidedSamples = 0.0;             // head 1, gliding to its time
+    double glidedSamples = 0.0;             // head 1: gliding to its time on tape, there at once in digital
+    double fadingFrom = 0.0;                // and in digital, the time it is crossfading away from
+    float fade = 1.0f;                      // how far that crossfade is, 1 when there is none
     float freezeAmount = 0.0f, pitchAmount = 0.0f, bypassAmount = 0.0f;
-    float outGain = 1.0f, dryAmount = 1.0f, wetAmount = 0.0f, feedbackSmoothed = 0.0f;
+    float outGain = 1.0f, dryAmount = 1.0f, wetAmount = 0.0f, feedbackSmoothed = 0.0f, delayOutGain = 1.0f;
     float spaceSmoothed = 0.0f, pingSmoothed = 0.0f;
+    bool spaceIdle = true;
+
+    /** A sine kept by turning a point round a circle: two multiplies a
+        sample instead of a call to sin. */
+    struct Rotor
+    {
+        float s = 0.0f, c = 1.0f, ds = 0.0f, dc = 1.0f;
+
+        void setRate (double hz, double sampleRate) noexcept
+        {
+            ds = (float) std::sin (6.283185307179586 * hz / sampleRate);
+            dc = (float) std::cos (6.283185307179586 * hz / sampleRate);
+        }
+
+        void step() noexcept { const auto n = s * dc + c * ds; c = c * dc - s * ds; s = n; }
+
+        /** Rounding makes the circle drift; once a block puts it back. */
+        void normalise() noexcept { const auto g = 1.0f / std::sqrt (s * s + c * c); s *= g; c *= g; }
+
+        /** The same sine, a fixed angle ahead, given that angle's sine and cosine. */
+        float ahead (float sinA, float cosA) const noexcept { return s * cosA + c * sinA; }
+    };
 
     // The unsteadiness: the slow wow, the quick flutter and a wandering
     // drift of tape, and the even sweep of a digital modulation.
-    double wowPhase = 0.0, flutterPhase = 0.0;
+    Rotor wow, flutter, sweep;
     float drift = 0.0f, driftTarget = 0.0f, driftCountdown = 0.0f;
-    double sweepPhase = 0.0;
     float wobbleShown = 0.0f;
     uint32_t noise = 0x9e3779b9u;
 

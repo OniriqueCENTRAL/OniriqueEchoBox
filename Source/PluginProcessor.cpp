@@ -127,6 +127,7 @@ namespace
         layout.add (std::make_unique<AudioParameterChoice> (ParameterID { "division", 1 }, "Division", divisions, 8));
         number ("feedback", "Feedback", { 0.0f, ebx::kMaxFeedback * 100.0f, 1.0f }, defaults.feedback * 100.0f, percent());
         number ("mix", "Mix", hundred, defaults.mix * 100.0f, percent());
+        number ("delayout", "Delay Out", { -30.0f, 6.0f, 0.1f }, defaults.delayOutDb, signedValue (1, "dB"));
 
         StringArray heads;
 
@@ -264,12 +265,13 @@ struct EchoBoxProcessor::Raw
 
         time = get ("time");         sync = get ("sync");         division = get ("division");
         feedback = get ("feedback"); mix = get ("mix");           heads = get ("heads");
+        delayOut = get ("delayout");
         character = get ("character"); tone = get ("tone");       pitch = get ("pitch");
         wobble = get ("wobble");     pingPong = get ("pingpong"); space = get ("space");
         freeze = get ("freeze");     out = get ("out");           bypass = get ("bypass");
     }
 
-    std::atomic<float> *time, *sync, *division, *feedback, *mix, *heads, *character, *tone, *pitch,
+    std::atomic<float> *time, *sync, *division, *feedback, *mix, *delayOut, *heads, *character, *tone, *pitch,
                        *wobble, *pingPong, *space, *freeze, *out, *bypass;
 };
 
@@ -321,6 +323,7 @@ ebx::Settings EchoBoxProcessor::readSettings() const noexcept
 
     s.feedback = r.feedback->load() * 0.01f;
     s.mix = r.mix->load() * 0.01f;
+    s.delayOutDb = r.delayOut->load();
     s.heads = roundToInt (r.heads->load());
     s.character = r.character->load() * 0.01f;
     s.tone = r.tone->load() * 0.01f;

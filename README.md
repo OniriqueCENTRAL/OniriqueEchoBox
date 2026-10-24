@@ -19,6 +19,7 @@ stéréo. Aucune latence. « EchoBox » est un nom provisoire.
 | ECHO | Time | le temps de la tête 1, 20 ms à 2 s ; avec **Sync**, une valeur de note (1/32 à 1/1, pointées, triolets) |
 | | Feedback | 0 à 110 % ; au-delà de 100, l'écho s'emballe et chante seul |
 | | Mix | sec seul (0) à échos seuls (100), les deux à plein au milieu |
+| | Delay Out | le niveau des échos seuls, de -30 à +6 dB, sans toucher au son direct |
 | | Heads 1 2 3 | les têtes de lecture, à une, deux et trois fois le temps, combinables |
 | | Freeze | fige la bande et la fait tourner en boucle, sans perte |
 | CHARACTER | Character | DIG ⟷ TAPE : numérique pur · numérique · bande · bande usée |

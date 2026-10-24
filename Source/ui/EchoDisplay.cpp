@@ -344,13 +344,20 @@ void EchoDisplay::paintRepeats (Graphics& g, Rectangle<float> area, const ebx::S
     {
         const auto x = xOf (0.0f);
         g.setColour (bone.withAlpha (0.85f));
-        g.fillRect (Rectangle<float> (2.0f, halfHeight * 1.6f).withCentre ({ x, mid }));
+        g.fillRect (Rectangle<float> (2.0f, 1.6f * halfHeight * heightOf (ebx::dryGain (s.mix))).withCentre ({ x, mid }));
         g.setFont (capsFont (8.0f));
         g.setColour (haze);
         g.drawText ("IN", Rectangle<float> (x - 12.0f, plot.getY() - 1.0f, 24.0f, 10.0f), Justification::centred, false);
     }
 
-    const auto repeats = ebx::predictRepeats (s, s.timeMs, spanMs);
+    auto repeats = ebx::predictRepeats (s, s.timeMs, spanMs);
+
+    // As loud as they are heard: the mix and the delay out move them too.
+    const auto heardAt = ebx::wetGain (s.mix) * Decibels::decibelsToGain (s.delayOutDb);
+
+    for (auto& r : repeats)
+        for (auto& level : r.level)
+            level *= heardAt;
     const auto hitAge = s.bypass ? -1.0f : lastHitAgeMs();
     const auto wobble = processor.getWobbleNow() * s.wobble;
 
