@@ -1,3 +1,16 @@
+#if __has_include ("ui/OniriqueTheme.h")
+ #include "ui/OniriqueTheme.h"
+#elif __has_include ("UI/OniriqueTheme.h")
+ #include "UI/OniriqueTheme.h"
+#elif __has_include ("OniriqueTheme.h")
+ #include "OniriqueTheme.h"
+#elif __has_include ("../License/OniriqueTheme.h")
+ #include "../License/OniriqueTheme.h"
+#elif __has_include ("../../License/OniriqueTheme.h")
+ #include "../../License/OniriqueTheme.h"
+#else
+ #include "License/OniriqueTheme.h"
+#endif
 #include "EchoDisplay.h"
 
 #include "Theme.h"
@@ -41,7 +54,7 @@ namespace
 
         // The tape on it, a dark brown ring that grows and shrinks.
         const auto tape = radius * (0.45f + 0.5f * wound);
-        g.setColour (Colour (0xff3a1a14).withAlpha (alpha));
+        g.setColour (onirique::look::tint (0xff3a1a14).withAlpha (alpha));
         g.fillEllipse (Rectangle<float> (tape * 2.0f, tape * 2.0f).withCentre (centre));
 
         g.setColour (colour.withAlpha (0.55f * alpha));
@@ -220,7 +233,7 @@ void EchoDisplay::paintMachine (Graphics& g, Rectangle<float> area, const ebx::S
         tape.lineTo (headsLeft - 8.0f, pathY);
         tape.lineTo (headsRight + 8.0f, pathY);
         tape.lineTo (right.x + radius * 0.7f, right.y + radius * 0.7f);
-        g.setColour (Colour (0xff6b3a2a).withAlpha (tapeAlpha));
+        g.setColour (onirique::look::tint (0xff6b3a2a).withAlpha (tapeAlpha));
         g.strokePath (tape, PathStrokeType (2.0f));
     }
 
@@ -261,7 +274,7 @@ void EchoDisplay::paintMachine (Graphics& g, Rectangle<float> area, const ebx::S
             g.fillRoundedRectangle (block.expanded (3.0f), 4.0f);
         }
 
-        g.setColour (on ? colour : Colour (0xff3a2427));
+        g.setColour (on ? colour : onirique::look::tint (0xff3a2427));
         g.fillRoundedRectangle (block, 2.5f);
 
         g.setColour (on ? night : haze);
