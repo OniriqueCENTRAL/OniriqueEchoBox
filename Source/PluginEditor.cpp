@@ -15,8 +15,6 @@ namespace
         static OniriqueLookAndFeel laf;
         return laf;
     }
-
-    constexpr int kHeaderHeight = 68;
     constexpr int kTitleLeft = 72;
     constexpr int kFootHeight = 46;
     constexpr int kPanelGap = 12;
@@ -228,6 +226,12 @@ EchoBoxEditor::EchoBoxEditor (EchoBoxProcessor& p)
     hoverTip.setAlwaysOnTop (true);
     addChildComponent (hoverTip);
 
+    // la barre « Nuit » à la place de l'ancien en-tête (ses boutons restent, cachés : la barre fait leur travail)
+    addAndMakeVisible (bar);
+    bar.onThemeChanged = [this] { themeSeen = -1; };
+    for (auto* c : std::initializer_list<Component*> { &previousButton, &nextButton, &saveButton, &deleteButton, &presetBox, &presetNameEditor, &slotAButton, &slotBButton, &copyButton, &bypassButton })
+        c->setVisible (false);
+
     licenseOverlay = std::make_unique<onirique::license::Overlay> ("ECHOBOX", processor.license);
     addAndMakeVisible (*licenseOverlay);
 
@@ -261,6 +265,11 @@ void EchoBoxEditor::attachTime (bool shouldSync)
         time.setEnds ("20ms", "2s");
 
     time.repaint();
+}
+
+Image EchoBoxEditor::barSigil()
+{
+    return ImageCache::getFromMemory (BinaryData::sigil_png, BinaryData::sigil_pngSize);
 }
 
 //==============================================================================
@@ -367,8 +376,6 @@ void EchoBoxEditor::timerCallback()
     display.repaint();
     updateHoverTip();
 
-    // The header is the only part of the frame that moves by itself.
-    repaint (0, 0, getWidth(), kHeaderHeight);
 }
 
 void EchoBoxEditor::describe (std::initializer_list<Component*> components, const char* text)
@@ -526,7 +533,6 @@ void EchoBoxEditor::paint (Graphics& g)
         daBackdrop = onirique::da::backdrop (getWidth(), getHeight(), (float) getWidth() / 1100.0f);
     g.drawImageAt (daBackdrop, 0, 0);
 
-    paintHeader (g, getLocalBounds().removeFromTop (kHeaderHeight));
 
     // Each family on its own ground, a shade redder than the rest, under
     // its name.
@@ -560,53 +566,19 @@ Rectangle<int> EchoBoxEditor::cell (int panel, int row, float column) const
 
 void EchoBoxEditor::resized()
 {
-    if (themeButton.getParentComponent() == nullptr) addAndMakeVisible (themeButton);
     auto bounds = getLocalBounds();
-    auto header = bounds.removeFromTop (kHeaderHeight);
+    bounds.removeFromTop (headerHeight());
 
-    // Controls sit in the upper part of the header, clear of the light that
-    // runs along its foot.
-    auto row = header.withTrimmedBottom (6).withSizeKeepingCentre (header.getWidth(), 30).withTrimmedRight (14);
-
-    themeButton.setBounds (row.removeFromRight (38));
-
-    row.removeFromRight (8);
-
-    bypassButton.setBounds (row.removeFromRight (100));
-    row.removeFromRight (10);
-
-    // The licence badge is one of the header's buttons, next to Bypass: the same height, the same capsule.
-    // Its room follows its wording, and the header is laid out again when the licence changes.
-    const auto badge = row.removeFromRight (licenseOverlay != nullptr ? licenseOverlay->pillWidth() : 0);
-    row.removeFromRight (18);
-
-    copyButton.setBounds (row.removeFromRight (64));
-    row.removeFromRight (4);
-    slotBButton.setBounds (row.removeFromRight (34));
-    row.removeFromRight (4);
-    slotAButton.setBounds (row.removeFromRight (34));
-    row.removeFromRight (18);
-
-    deleteButton.setBounds (row.removeFromRight (74));
-    row.removeFromRight (4);
-    saveButton.setBounds (row.removeFromRight (60));
-    row.removeFromRight (8);
-
-    // The name takes what is left between the title and the buttons.
-    row.removeFromLeft (titleRight() + 62);
-    previousButton.setBounds (row.removeFromLeft (30));
-    row.removeFromLeft (4);
-    nextButton.setBounds (row.removeFromLeft (30));
-    row.removeFromLeft (6);
-    presetBox.setBounds (row);
-    presetNameEditor.setBounds (row);
+    // la barre « Nuit » en haut, la pastille de licence à sa place dans la barre
+    const float barScale = (float) getWidth() / (float) kBarUnits;
+    bar.setPillWidth (licenseOverlay != nullptr ? licenseOverlay->pillWidth() : 0);
+    bar.place (barScale, getLocalBounds());
+    if (licenseOverlay != nullptr)
+        licenseOverlay->fit (getLocalBounds(), barScale, bar.getPillArea(), Justification::centredRight);
 
     auto foot = bounds.removeFromBottom (kFootHeight).reduced (14, 0).withTrimmedBottom (12).withTrimmedTop (4);
     output.setBounds (foot.removeFromRight (100));
 
-    // The window grows by giving its contents more room, not by zooming them: the scale is 1.
-    if (licenseOverlay != nullptr)
-        licenseOverlay->fit (getLocalBounds(), 1.0f, badge, Justification::centredRight);
 
     // The families take the lower half, the screen what is left above them.
     auto lower = bounds.removeFromBottom (jlimit (280, 380, bounds.getHeight() * 50 / 100)).reduced (14, 0);
@@ -621,7 +593,7 @@ void EchoBoxEditor::resized()
     display.setBounds (bounds.reduced (14, 12));
 
     // The browser lies over everything under the header.
-    browser.setBounds (getLocalBounds().withTrimmedTop (kHeaderHeight).reduced (14, 12));
+    browser.setBounds (getLocalBounds().withTrimmedTop (headerHeight()).reduced (14, 12));
 
     // The echo: three dials over their switches.
     time.setBounds (cell (0, 0, 0));

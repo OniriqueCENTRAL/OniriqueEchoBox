@@ -1,5 +1,6 @@
 // Onirique EchoBox — editor
 #pragma once
+#include "ui/OniriqueBar.h"   // la barre « Nuit » de VOCALBOX
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "../License/OniriqueThemeButton.h"
@@ -80,6 +81,17 @@ private:
     };
 
     EchoBoxProcessor& processor;
+
+
+    // la barre « Nuit » (presets, IN, A/B, copier/coller, menu ⋯ avec la couleur de l'interface), à la place de l'en-tête
+
+    static constexpr int kBarUnits = 853;   // 50 points de haut = 68 pixels à la taille d'ouverture (1160)
+
+    static Image barSigil();
+
+    onirique::nuit::Bar bar { processor.presets, processor.apvts, "ECHOBOX", barSigil(), kBarUnits, 1160 };
+
+    int headerHeight() const { return roundToInt (50.0f * (float) getWidth() / (float) kBarUnits); }
 
     EchoDisplay display;
 
