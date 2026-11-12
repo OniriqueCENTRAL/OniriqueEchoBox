@@ -1,0 +1,2 @@
+EchoBox-macOS-AU.zip
+EchoBox-macOS-VST3.zip
